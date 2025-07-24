@@ -1,48 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useContext } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import "./App.css";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext";
+import { NotesProvider } from "./contexts/NotesContext";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import Login from "./components/Login";
+import Register from "./components/Register";
+import NotesList from "./components/NotesList";
+import NoteEditor from "./components/NoteEditor";
+import NoteView from "./components/NoteView";
+import TagManager from "./components/TagManager";
+
+// PUBLIC_INTERFACE
+function ProtectedRoute({ children }) {
+  /** Wrapper for routes requiring authentication */
+  const { isAuthenticated, loading } = useContext(AuthContext);
+  if (loading) return <div>Loading...</div>;
+  return isAuthenticated ? children : <Navigate to="/login" />;
+}
+
+// PUBLIC_INTERFACE
+function AppLayout() {
+  /** Main layout for authenticated users: sidebar, topbar, main */
+  const { logout } = useContext(AuthContext);
+  return (
+    <div className="app-root">
+      <Sidebar />
+      <div className="main-content">
+        <Navbar onLogout={logout} />
+        <div className="main-scroll">
+          <Routes>
+            <Route path="/" element={<NotesList />} />
+            <Route path="/notes/:id" element={<NoteView />} />
+            <Route path="/edit/:id" element={<NoteEditor />} />
+            <Route path="/new" element={<NoteEditor />} />
+            <Route path="/tags" element={<TagManager />} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
-
-  // Effect to apply theme to document element
+  /**
+   * Top-level app with authentication and state providers
+   */
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
-
+    // Default theme
+    document.documentElement.setAttribute("data-theme", "light");
+  }, []);
   return (
-    <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthProvider>
+      <NotesProvider>
+        <Router>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <div className="centered-auth">
+                  <Login />
+                </div>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <div className="centered-auth">
+                  <Register />
+                </div>
+              }
+            />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </NotesProvider>
+    </AuthProvider>
   );
 }
 
